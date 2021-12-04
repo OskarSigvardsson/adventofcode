@@ -12,13 +12,12 @@ def bingo(board, numbers):
         marked.add(n)
         unmarked.discard(n)
 
-        for ri in range(len(board)):
-            if all(n in marked for n in board[ri]):
-                return len(marked), n, unmarked
+        if any(all(n in marked for n in row) for row in board):
+            return len(marked), n, unmarked
 
-            if all(n in marked for n in tp[ri]):
-                return len(marked), n, unmarked
-        
+        if any(all(n in marked for n in row) for row in tp):
+            return len(marked), n, unmarked
+            
     return len(marked) + 1, -1, unmarked
 
 def part1(boards, ns):
