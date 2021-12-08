@@ -54,13 +54,11 @@ output_number([O|Os], Map, Acc1, Res) :-
 % Loop through all the inputs, genereate the output_numbers, sum it all up
 part2([], [], Res, Res).
 part2([In|Ins], [Out|Outs], Acc1, Res) :-
-	Map = [a-A,b-B,c-C,d-D,e-E,f-F,g-G],
+	Map = [a-_,b-_,c-_,d-_,e-_,f-_,g-_],
 	solve(In, Map),
 	output_number(Out, Map, 0, Ns),
 	Acc2 is Acc1 + Ns,
 	part2(Ins, Outs, Acc2, Res).
-
-:- inputs(Ins, Outs), part2(Ins, Outs, 0, Res).
 
 % the rest of this is just parsing
 inputs(Inputs, Outputs) :-
@@ -81,3 +79,9 @@ to_atoms(Str, Atoms) :-
 string_atoms(Str, Atoms) :-
 	string_codes(Str, Codes),
 	findall(Atom, (member(C, Codes), atom_codes(Atom, [C])), Atoms).
+
+
+:- inputs(Ins, Outs),
+   part2(Ins, Outs, 0, Res),
+   format("~d~n", Res),
+   halt.
