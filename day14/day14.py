@@ -30,7 +30,7 @@ def part2(polymer, rules, generations):
     memo = {}
     
     # Function that returns the counts of all the elements between two elements.
-    # The function is memoized: this is a Dynamic Programming problem: the
+    # The function is memoized: this is a Dynamic Programming problem. The
     # recursions overlap
     def polycount(c1, c2, gens):
         if gens == 0:
