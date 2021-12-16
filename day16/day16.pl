@@ -25,14 +25,6 @@ bin_int([H|T], Acc1, Res) :-
 bin_int(Bs, I) :- bin_int(Bs, 0, I).
 bin_int_r(Bs, I) :- reverse(Bs, Brs), bin_int(Brs, 0, I).
 
-bits(Bs) :-
-	file_line("input.txt", L), !,
-	findall(
-		Hs,
-		( sub_string(L, _, 1, _, C), hex(C, Hs) ),
-		Bns),
-	flatten(Bns, Bs).
-
 parse(Str, Ps) :-
 	findall(Hs, (sub_string(Str, _, 1, _, C), hex(C, Hs)), Nested),
 	flatten(Nested, Bits),
@@ -108,5 +100,9 @@ eval(o(_, 5, [A,B]), N) :- eval(A, N1), eval(B, N2), (N1  >  N2 -> N = 1 ; N = 0
 eval(o(_, 6, [A,B]), N) :- eval(A, N1), eval(B, N2), (N1  <  N2 -> N = 1 ; N = 0).
 eval(o(_, 7, [A,B]), N) :- eval(A, N1), eval(B, N2), (N1 =:= N2 -> N = 1 ; N = 0).
 	
-
+:- file_line("input.txt", L), !,
+   parse(L, P),
+   eval(P, N),
+   format("Answer: ~d", N),
+   halt.
 
