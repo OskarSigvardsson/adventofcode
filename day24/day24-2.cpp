@@ -16,6 +16,19 @@ struct Domain;
 
 Domain& combine(auto &&op, Domain &d1, const Domain &d2);
 
+
+template<typename T>
+T min(T a, T b) {
+	return a < b ? a : b;
+}
+
+auto min(auto a, auto b)
+{
+	return a < b ? a : b;
+}
+
+auto x = min(123, 142.5);
+
 struct Range {
 	i64 min;
 	i64 max;
@@ -129,7 +142,7 @@ bool check_prefix(const std::vector<Instruction> inst, std::vector<char> &prefix
 
 	int ictr = 0;
 	
-	if (prefix.size() <= 2) {
+	if (prefix.size() <= 5) {
 		std::cout << "Prefix: ";
 
 		for (int c: prefix) {

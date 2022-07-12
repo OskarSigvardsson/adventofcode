@@ -8,8 +8,6 @@
 
 #define COEFS 16
 
-using std::endl;
-
 struct Num;
 struct Var;
 struct Add;
