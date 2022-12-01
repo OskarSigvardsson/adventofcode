@@ -40,6 +40,13 @@ struct coord
 	auto operator<=>(const coord&) const = default;
 };
 
+int dist(coord c1, coord c2) {
+	auto [x1,y1] = c1.unpack();
+	auto [x2,y2] = c2.unpack();
+
+	return std::abs(x1 - x2) + std::abs(y1 - y2);
+}
+
 multimap<coord, vec<coord>> build_paths()
 {
 	multimap<coord, vec<coord>> paths;
@@ -96,6 +103,7 @@ const auto paths = build_paths();
 
 struct state {
 	int32_t energy;
+	int32_t heuristic;
 
 	std::array<coord, 8> aphids;
 	std::array<int, 8> movecnt;
@@ -177,6 +185,20 @@ struct state {
 		return true;
 	}
 
+	void calc_heuristic() {
+		heuristic = 0;
+		
+		for (int aphid = 0; aphid < 8; aphid++) {
+			auto a = aphids[aphid];
+			int kind = aphid>>1;
+
+			coord t1 { 3 + kind*2, 2 };
+			coord t2 { 3 + kind*2, 3 };
+
+			heuristic += std::pow(10, kind) * std::min(dist(a, t1), dist(a, t2));
+		}
+	}
+
 	bool is_home(int aphid) const
 	{
 		auto [x,y] = aphids[aphid].unpack();
@@ -226,6 +248,7 @@ struct state {
 				newState.energy = energy + path.size() * std::pow(10, aphid >> 1); 
 				newState.aphids[aphid] = fin;
 				newState.movecnt[aphid]++;
+				newState.calc_heuristic();
 				
 				if (debug) {
 					newState.debug();
@@ -265,6 +288,7 @@ state make_state(std::string_view pattern) {
 		s.movecnt[i] = 0;
 	}
 
+	s.calc_heuristic();
 	return s;
 }
 
@@ -327,12 +351,12 @@ int main() {
 
 	struct comparer {
 		bool operator()(const state &s1, const state &s2) {
-			return s1.energy > s2.energy;
+			return s1.energy + s1.heuristic > s2.energy + s2.heuristic;
 		}
 	};
 
 	vec<state> next;
-	set<state> visited;
+	set<state> closed;
 	priority_queue<state, comparer> queue;
 
 	queue.push(init);
@@ -345,12 +369,12 @@ int main() {
 		auto s = queue.top();
 		queue.pop();
 
-		if (visited.find(s) != visited.end()) {
+		if (closed.find(s) != closed.end()) {
 			continue;
 		}
 
 		if (i++ % 1000 == 0) {
-			std::cout << s.energy << '\r' << std::flush;
+			std::cout << s.energy + s.heuristic << "          \r" << std::flush;
 		}
 
 		// if (s.energy == 40) {
@@ -367,12 +391,12 @@ int main() {
 			break;
 		}
 		
-		visited.insert(s);
+		closed.insert(s);
 
 		s.push_new_states(next, false);
 
 		for (auto &s: next) {
-			if (visited.find(s) == visited.end()) {
+			if (closed.find(s) == closed.end()) {
 				queue.push(s);
 			}
 		}

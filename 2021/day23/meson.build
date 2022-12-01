@@ -6,3 +6,6 @@ executable('day23',
            sources: ['day23.cpp'],
            dependencies: [abseil])
 
+executable('day23-2',
+           sources: ['day23-2.cpp'],
+           dependencies: [abseil])
