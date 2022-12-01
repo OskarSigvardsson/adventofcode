@@ -14,8 +14,8 @@
 (apply max (elves "input.txt"))
 
 ;; part 2
-(let ([sorted(sort > (elves "test.txt"))])
+(let ([sorted (sort > (elves "test.txt"))])
   (+ (car sorted) (cadr sorted) (caddr sorted)))
 
-(let ([sorted(sort > (elves "input.txt"))])
+(let ([sorted (sort > (elves "input.txt"))])
   (+ (car sorted) (cadr sorted) (caddr sorted)))
