@@ -1,7 +1,7 @@
 #!r6rs
 
 (library (advent)
-  (export file-lines split-delim)
+  (export file-lines split-delim between?)
   (import (chezscheme))
 
   (define split-delim
@@ -21,5 +21,9 @@
 		  (let loop ([acc '()])
 			(let ([line (get-line (current-input-port))])
 			  (if (eof-object? line) (reverse acc)
-				  (loop (cons line acc))))))))))
+				  (loop (cons line acc)))))))))
+
+  (define between?
+	(lambda (min x max)
+      (and (<= min x) (<= x max)))))
 
