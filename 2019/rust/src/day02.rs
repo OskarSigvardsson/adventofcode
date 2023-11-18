@@ -1,10 +1,13 @@
 use crate::intcode::IntCode;
 
-pub fn part1() {
-    // let mut test = IntCode::new_from_str(include_str!("../inputs/day02-test.txt"));
-    // test.run_to_halt();
-    // println!("Part 1 test: {}", test.load(0));
+#[test]
+fn part1_test() {
+    let mut test = IntCode::new_from_str(include_str!("../inputs/day02-test.txt"));
+    test.run_to_halt();
+    assert_eq!(3500, test.load(0));
+}
 
+pub fn part1() {
     let mut real = IntCode::new_from_str(include_str!("../inputs/day02-real.txt"));
     real.store(1, 12);
     real.store(2, 2);

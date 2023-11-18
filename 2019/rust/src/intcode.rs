@@ -15,7 +15,6 @@ pub struct IntCode {
 
 struct ExecutionState {
     memory: Vec<i64>,
-    ip: usize,
     input: Receiver<InputMessage>,
     output: Sender<OutputMessage>,
     debug: bool,
@@ -51,14 +50,15 @@ impl Drop for IntCode {
 
 impl IntCode {
     pub fn new_from_str(str: &str) -> IntCode {
-        IntCode::new(
-            str.trim()
-                .split(",")
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .map(|s| s.parse::<i64>().unwrap())
-                .collect::<Vec<_>>(),
-        )
+        let vec = str
+            .trim()
+            .split(",")
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse::<i64>().unwrap())
+            .collect::<Vec<_>>();
+
+        IntCode::new(vec)
     }
 
     #[allow(non_snake_case)]
@@ -68,7 +68,6 @@ impl IntCode {
         let (threadTx, threadRx) = channel::<ThreadMessage>();
         let exec = Arc::new(Mutex::new(ExecutionState {
             memory: initial.clone(),
-            ip: 0,
             input: inRx,
             output: outTx,
             debug: false,
@@ -83,7 +82,7 @@ impl IntCode {
         });
 
         IntCode {
-            initial,
+            initial: initial,
             execution: exec,
             input: inTx,
             output: outRx,
@@ -127,11 +126,11 @@ impl IntCode {
     }
 
     pub fn load(&self, i: i64) -> i64 {
-        self.execution.lock().unwrap().load(i, ParamMode::Position)
+        self.execution.lock().unwrap().memory[i as usize]
     }
 
     pub fn store(&mut self, i: i64, val: i64) {
-        self.execution.lock().unwrap().store(i, val)
+        self.execution.lock().unwrap().memory[i as usize] = val;
     }
 
     pub fn run(&mut self) {
@@ -147,12 +146,26 @@ impl IntCode {
             }
         }
     }
+
+    pub fn collect_output(&mut self) -> Vec<i64> {
+        let mut output = Vec::new();
+
+        loop {
+            match self.output() {
+                OutputMessage::Value(v) => {
+                    output.push(v);
+                }
+                OutputMessage::Halt => return output,
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
 enum ParamMode {
     Position,
     Immediate,
+    Relative,
 }
 
 impl ParamMode {
@@ -160,6 +173,7 @@ impl ParamMode {
         match i {
             0 => ParamMode::Position,
             1 => ParamMode::Immediate,
+            2 => ParamMode::Relative,
             _ => panic!("unknown param mode"),
         }
     }
@@ -168,66 +182,122 @@ impl ParamMode {
 impl ExecutionState {
     pub fn reset(&mut self, initial: &Vec<i64>) {
         self.memory.clone_from(initial);
-        self.ip = 0;
 
         for _ in self.input.try_iter() {}
     }
 
-    pub fn next(&mut self) -> i64 {
-        let val = self.memory[self.ip];
-
-        if self.debug {
-            println!("inst[{}] = {}", self.ip, val);
-        }
-
-        self.ip += 1;
-        val
-    }
-
-    pub fn load(&self, i: i64, pmode: ParamMode) -> i64 {
-        match pmode {
-            ParamMode::Position => {
-                let val = self.memory[i as usize];
-                if self.debug {
-                    println!("LOAD ({}) -> {}", i, val);
-                }
-                val
+    fn ensure_mem_size(&mut self, i: i64) {
+        if i as usize >= self.memory.len() {
+            if self.debug {
+                println!("memory resize {} -> {}", self.memory.len(), i);
             }
-            ParamMode::Immediate => {
-                if self.debug {
-                    println!("LOAD (const) -> {}", i);
-                }
-                i
-            }
-        }
-    }
 
-    pub fn store(&mut self, i: i64, val: i64) {
-        if self.debug {
-            println!("STORE {} -> ({})", val, i);
+            self.memory.resize(i as usize + 1, 0);
         }
-        self.memory[i as usize] = val;
-    }
-
-    pub fn jump(&mut self, dest: i64) {
-        if self.debug {
-            println!("JUMP {}", dest);
-        }
-        self.ip = dest as usize;
     }
 
     pub fn run(&mut self) {
+        let mut ip: i64 = 0;
+        let mut rb: i64 = 0;
+
         let dbg = self.debug;
 
-        if dbg {
-            println!("STARTING INTERPRETER");
+        macro_rules! trace {
+			($($tts:tt)*) => {
+				if dbg {
+					println!($($tts)*)
+				}
+			}
+		}
+
+        macro_rules! next {
+            () => {{
+                assert!(ip >= 0);
+                let val = self.memory[ip as usize];
+
+                trace!("inst[{}] = {}", ip, val);
+
+                ip += 1;
+                val
+            }};
         }
 
+        macro_rules! jump {
+            ($dest:expr) => {{
+                let d = $dest;
+
+                trace!("JUMP {}", d);
+
+                ip = d as i64;
+            }};
+        }
+
+        macro_rules! store {
+            ($arg:expr, $mode:expr, $val:expr) => {{
+                let arg = $arg;
+                let val = $val;
+
+                match $mode {
+                    ParamMode::Position => {
+                        trace!("STORE {} -> ({})", val, arg);
+
+                        self.ensure_mem_size(arg);
+                        self.memory[arg as usize] = val;
+                    }
+
+                    ParamMode::Immediate => {
+                        panic!("Can't store with immediate param mode");
+                    }
+
+                    ParamMode::Relative => {
+                        self.ensure_mem_size(rb + arg);
+
+                        trace!("STORE {} -> ({} + {})", val, rb, arg);
+                        self.memory[(rb + arg) as usize] = val;
+                    }
+                }
+            }};
+        }
+
+        macro_rules! load {
+            ($arg:expr, $mode:expr) => {{
+                let arg = $arg;
+
+                match $mode {
+                    ParamMode::Position => {
+                        self.ensure_mem_size(arg);
+
+                        let val = self.memory[arg as usize];
+
+                        trace!("LOAD ({}) -> {}", arg, val);
+
+                        val
+                    }
+
+                    ParamMode::Immediate => {
+                        trace!("CONST {}", arg);
+
+                        arg
+                    }
+
+                    ParamMode::Relative => {
+                        self.ensure_mem_size(rb + arg);
+
+                        let val = self.memory[(rb + arg) as usize];
+
+                        trace!("LOAD ({} + {}) -> {}", rb, arg, val);
+
+                        val
+                    }
+                }
+            }};
+        }
+
+        trace!("STARTING INTERPRETER");
+
         loop {
-            if dbg {
-                println!("--------------")
-            }
-            let inst = self.next();
+            trace!("--------------");
+            let inst = next!();
 
             let opcode = inst % 100;
             let pm1 = ParamMode::from((inst / 100) % 10);
@@ -235,119 +305,96 @@ impl ExecutionState {
             #[allow(unused_variables)]
             let pm3 = ParamMode::from((inst / 10000) % 10);
 
-            if dbg {
-                println!("    OPCODE {}", opcode)
-            }
-            if dbg {
-                println!("    PMs {:?} {:?} {:?}", pm1, pm2, pm3)
-            }
+            trace!("    OPCODE {}", opcode);
+            trace!("    PMs {:?} {:?} {:?}", pm1, pm2, pm3);
 
             match opcode {
                 1 => {
-                    let (a, b, dest) = (self.next(), self.next(), self.next());
+                    let (a, b, dest) = (next!(), next!(), next!());
 
-                    if dbg {
-                        println!("ADD");
-                    }
+                    trace!("ADD");
 
-                    self.store(dest, self.load(a, pm1) + self.load(b, pm2));
+                    store!(dest, pm3, load!(a, pm1) + load!(b, pm2));
                 }
 
                 2 => {
-                    let (a, b, dest) = (self.next(), self.next(), self.next());
+                    let (a, b, dest) = (next!(), next!(), next!());
 
-                    if dbg {
-                        println!("MUL");
-                    }
+                    trace!("MUL");
 
-                    self.store(dest, self.load(a, pm1) * self.load(b, pm2));
+                    store!(dest, pm3, load!(a, pm1) * load!(b, pm2));
                 }
 
                 3 => {
-                    let addr = self.next();
+                    let addr = next!();
                     let input = match self.input.recv().unwrap() {
-						InputMessage::Stop => return,
-						InputMessage::Value(v) => v,
-					};
-						
+                        InputMessage::Stop => return,
+                        InputMessage::Value(v) => v,
+                    };
 
-                    if dbg {
-                        println!("INPUT {}", input);
-                    }
+                    trace!("INPUT {}", input);
 
-                    self.store(addr, input);
+                    store!(addr, pm1, input);
                 }
 
                 4 => {
-                    let addr = self.next();
+                    let addr = next!();
+                    let val = load!(addr, pm1);
 
-                    if dbg {
-                        println!("OUTPUT");
-                    }
+                    trace!("OUTPUT {val}");
 
-                    self.output
-                        .send(OutputMessage::Value(self.load(addr, pm1)))
-                        .unwrap();
+                    self.output.send(OutputMessage::Value(val)).unwrap();
                 }
 
                 5 => {
-                    let (test, dest) = (self.next(), self.next());
+                    let (test, dest) = (next!(), next!());
 
-                    if dbg {
-                        println!("JMP-IF-TRUE")
-                    }
+                    trace!("JMP-IF-TRUE");
 
-                    if self.load(test, pm1) != 0 {
-                        self.jump(self.load(dest, pm2))
+                    if load!(test, pm1) != 0 {
+                        jump!(load!(dest, pm2))
                     }
                 }
 
                 6 => {
-                    let (test, dest) = (self.next(), self.next());
+                    let (test, dest) = (next!(), next!());
 
-                    if dbg {
-                        println!("JMP-IF-FALSE")
-                    }
+                    trace!("JMP-IF-FALSE");
 
-                    if self.load(test, pm1) == 0 {
-                        self.jump(self.load(dest, pm2))
+                    if load!(test, pm1) == 0 {
+                        jump!(load!(dest, pm2))
                     }
                 }
 
                 7 => {
-                    let (a, b, dest) = (self.next(), self.next(), self.next());
+                    let (a, b, dest) = (next!(), next!(), next!());
 
-                    if dbg {
-                        println!("LESS-THAN")
-                    }
+                    trace!("LESS-THAN");
 
-                    let result = if self.load(a, pm1) < self.load(b, pm2) {
-                        1
-                    } else {
-                        0
-                    };
-                    self.store(dest, result);
+                    let result = if load!(a, pm1) < load!(b, pm2) { 1 } else { 0 };
+                    store!(dest, pm3, result);
                 }
 
                 8 => {
-                    let (a, b, dest) = (self.next(), self.next(), self.next());
+                    let (a, b, dest) = (next!(), next!(), next!());
 
-                    if dbg {
-                        println!("EQUALS")
-                    }
+                    trace!("EQUALS");
 
-                    let result = if self.load(a, pm1) == self.load(b, pm2) {
-                        1
-                    } else {
-                        0
-                    };
-                    self.store(dest, result);
+                    let result = if load!(a, pm1) == load!(b, pm2) { 1 } else { 0 };
+                    store!(dest, pm3, result);
+                }
+
+                9 => {
+                    let p = next!();
+                    let adj = load!(p, pm1);
+
+                    trace!("ADJUST-RB {} + {} -> {}", rb, adj, rb + adj);
+
+                    rb += adj;
                 }
 
                 99 => {
-                    if dbg {
-                        println!("HALT");
-                    }
+                    trace!("HALT");
                     self.output.send(OutputMessage::Halt).unwrap();
                     break;
                 }
@@ -356,8 +403,6 @@ impl ExecutionState {
             }
         }
 
-        if dbg {
-            println!("ENDING INTERPRETER");
-        }
+        trace!("ENDING INTERPRETER");
     }
 }

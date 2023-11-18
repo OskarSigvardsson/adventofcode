@@ -23,7 +23,8 @@ pub fn part1() {
     println!("Part 1: {}", val);
 }
 
-pub fn part2() {
+#[test]
+fn part2_test() {
     let mut test = IntCode::new_from_str(include_str!("../inputs/day05-test.txt"));
     test.debug(false);
 
@@ -43,10 +44,12 @@ pub fn part2() {
             1001
         };
 
-        assert!(o1 == OutputMessage::Value(expected));
-        assert!(o2 == OutputMessage::Halt);
+        assert_eq!(o1, OutputMessage::Value(expected));
+        assert_eq!(o2, OutputMessage::Halt);
     }
+}
 
+pub fn part2() {
     let mut real = IntCode::new_from_str(include_str!("../inputs/day05-real.txt"));
     real.debug(false);
     real.reset();

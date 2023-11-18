@@ -34,18 +34,30 @@ fn part1_impl(code: &str) -> (i64, Vec<i64>) {
         .unwrap()
 }
 
+#[test]
+fn part1_test() {
+    let tests = include_str!("../inputs/day07-test.txt")
+        .trim()
+        .split("\n")
+        .take(3);
+
+    let result = tests
+        .enumerate()
+        .map(|(i, test)| {
+            let (val, perm) = part1_impl(test);
+
+            println!("Part 1 test {}: {} ({:?})", i, val, perm);
+
+            perm
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(result[0], vec![4, 3, 2, 1, 0]);
+    assert_eq!(result[1], vec![0, 1, 2, 3, 4]);
+    assert_eq!(result[2], vec![1, 0, 4, 3, 2]);
+}
+
 pub fn part1() {
-    // let tests = include_str!("../inputs/day07-test.txt")
-    //     .trim()
-    //     .split("\n")
-    //     .take(3);
-
-    // for (i, test) in tests.enumerate() {
-    //     let (val, perm) = part1_impl(test);
-
-    //     println!("Part 1 test {}: {} ({:?})", i, val, perm);
-    // }
-
     let real = include_str!("../inputs/day07-real.txt");
     let (val, _) = part1_impl(real);
 
@@ -93,18 +105,29 @@ fn part2_impl(code: &str) -> (i64, Vec<i64>) {
         .unwrap()
 }
 
+#[test]
+fn part2_test() {
+    let tests = include_str!("../inputs/day07-test.txt")
+        .trim()
+        .split("\n")
+        .skip(3);
+
+    let result = tests
+        .enumerate()
+        .map(|(i, test)| {
+            let (val, perm) = part2_impl(test);
+
+            println!("Part 2 test {}: {} ({:?})", i, val, perm);
+
+            perm
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(result[0], vec![9, 8, 7, 6, 5]);
+    assert_eq!(result[1], vec![9, 7, 8, 5, 6]);
+}
+
 pub fn part2() {
-    // let tests = include_str!("../inputs/day07-test.txt")
-    //     .trim()
-    //     .split("\n")
-    //     .skip(3);
-
-    // for (i, test) in tests.enumerate() {
-    //     let (val, perm) = part2_impl(test);
-
-    //     println!("Part 2 test {}: {} ({:?})", i, val, perm);
-    // }
-
     let real = include_str!("../inputs/day07-real.txt");
     let (val, _) = part2_impl(real);
     println!("Part 2: {}", val);
