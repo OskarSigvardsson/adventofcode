@@ -8,7 +8,7 @@
 	(lambda (delim list)
 	  (let loop ([l list] [curr '()] [chunks '()])
 		(cond
-		 [(eq? l '()) (reverse (cons curr chunks))]
+		 [(eq? l '()) (reverse (cons (reverse curr) chunks))]
 		 [(equal? delim (car l))
 		  (loop (cdr l) '() (cons (reverse curr) chunks))]
 		 [else
@@ -22,6 +22,8 @@
 			(let ([line (get-line (current-input-port))])
 			  (if (eof-object? line) (reverse acc)
 				  (loop (cons line acc)))))))))
+
+  
 
   (define between?
 	(lambda (min x max)

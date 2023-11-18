@@ -1,3 +1,8 @@
+tests = [
+    length_ok, "Length is not ok",
+    is
+]
+
 data = []
 width = 0
 height = 0

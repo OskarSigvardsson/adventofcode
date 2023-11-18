@@ -10,12 +10,15 @@
              [else (loop (+ curr (string->number line)) elves)])))))))
 
 
+(elves "test.txt")
 ;; part 1
 (apply max (elves "test.txt"))
 (apply max (elves "input.txt"))
 
+(+ 2 3)
+
 ;; part 2
-(let ([sorted (sort > (elves "test.txt"))])
+(let ([sorted (sort > (elves "input.txt"))])
   (+ (car sorted) (cadr sorted) (caddr sorted)))
 
 (let ([sorted (sort > (elves "input.txt"))])
