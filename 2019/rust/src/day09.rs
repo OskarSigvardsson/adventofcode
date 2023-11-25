@@ -17,44 +17,46 @@ fn part1_test() {
     //c1.debug(true);
     c1.run();
 
-    assert_eq!(code1, c1.collect_output());
+    assert_eq!(code1, c1.collect_output().unwrap());
 
     let mut c2 = IntCode::new_from_str(results[1]);
     c2.run();
-    assert_eq!(16, c2.output_value().to_string().len());
+    assert_eq!(16, c2.output_value().unwrap().to_string().len());
 
     let code3 = results[2]
         .split(",")
         .map(|s| s.trim().parse::<i64>().unwrap())
         .collect::<Vec<_>>();
     let mut c3 = IntCode::new(code3.clone());
-	c3.run();
+    c3.run();
 
-	assert_eq!(code3[1], c3.output_value());
+    assert_eq!(code3[1], c3.output_value().unwrap());
 }
 
 pub fn part1() {
-	let mut ic = IntCode::new_from_str(include_str!("../inputs/day09-real.txt"));
-	ic.run();
-	ic.input(1);
+    let mut ic = IntCode::new_from_str(include_str!("../inputs/day09-real.txt"));
+    ic.run();
+    ic.input(1);
 
-	loop {
-		match ic.output() {
-			OutputMessage::Value(v) => println!("Part 1: {v}"),
-			OutputMessage::Halt => break,
-		}
-	}
+    loop {
+        match ic.output() {
+            OutputMessage::Value(v) => println!("Part 1: {v}"),
+            OutputMessage::WantsInput => (),
+            OutputMessage::Halt => break,
+        }
+    }
 }
 
 pub fn part2() {
-	let mut ic = IntCode::new_from_str(include_str!("../inputs/day09-real.txt"));
-	ic.run();
-	ic.input(2);
+    let mut ic = IntCode::new_from_str(include_str!("../inputs/day09-real.txt"));
+    ic.run();
+    ic.input(2);
 
-	loop {
-		match ic.output() {
-			OutputMessage::Value(v) => println!("Part 2: {v}"),
-			OutputMessage::Halt => break,
-		}
-	}
+    loop {
+        match ic.output() {
+            OutputMessage::Value(v) => println!("Part 2: {v}"),
+            OutputMessage::WantsInput => (),
+            OutputMessage::Halt => break,
+        }
+    }
 }

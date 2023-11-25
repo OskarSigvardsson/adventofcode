@@ -12,6 +12,7 @@ fn part1_impl(code: &str) -> (i64, Vec<i64>) {
         .map(|perm| {
             for (i, amp) in amps.iter_mut().enumerate() {
                 amp.reset();
+                amp.ignore_wants_input(true);
                 amp.run();
                 amp.input(perm[i]);
             }
@@ -19,13 +20,13 @@ fn part1_impl(code: &str) -> (i64, Vec<i64>) {
             amps[0].input(0);
 
             for (amp1, amp2) in amps.iter().tuple_windows() {
-                amp2.input(amp1.output_value());
+                amp2.input(amp1.output_value().unwrap());
             }
 
-            let result = amps[4].output_value();
+            let result = amps[4].output_value().unwrap();
 
             for amp in amps.iter_mut() {
-                amp.output_halt();
+                amp.output_halt().unwrap();
             }
 
             (result, perm)
@@ -74,6 +75,7 @@ fn part2_impl(code: &str) -> (i64, Vec<i64>) {
         .map(|perm| {
             for (i, amp) in amps.iter_mut().enumerate() {
                 amp.reset();
+                amp.ignore_wants_input(true);
                 amp.run();
                 amp.input(perm[i]);
             }
@@ -88,6 +90,7 @@ fn part2_impl(code: &str) -> (i64, Vec<i64>) {
 
                     match out {
                         OutputMessage::Value(v) => amp2.input(v),
+                        OutputMessage::WantsInput => panic!(),
                         OutputMessage::Halt => (),
                     }
                 }
@@ -98,6 +101,7 @@ fn part2_impl(code: &str) -> (i64, Vec<i64>) {
                         amps[0].input(v);
                     }
                     OutputMessage::Halt => break (result.unwrap(), perm),
+                    OutputMessage::WantsInput => panic!(),
                 }
             }
         })

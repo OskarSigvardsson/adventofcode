@@ -2,6 +2,7 @@ use crate::intcode::{IntCode, OutputMessage};
 
 pub fn part1() {
     let mut test = IntCode::new_from_str(include_str!("../inputs/day05-real.txt"));
+    test.ignore_wants_input(true);
     test.run();
     test.input(1);
     let mut val: i64 = 0;
@@ -14,6 +15,7 @@ pub fn part1() {
                 }
                 val = v
             }
+            OutputMessage::WantsInput => panic!(),
             OutputMessage::Halt => break,
         }
     }
@@ -26,6 +28,7 @@ pub fn part1() {
 #[test]
 fn part2_test() {
     let mut test = IntCode::new_from_str(include_str!("../inputs/day05-test.txt"));
+    test.ignore_wants_input(true);
     test.debug(false);
 
     for i in 0..20 {
@@ -52,17 +55,9 @@ fn part2_test() {
 pub fn part2() {
     let mut real = IntCode::new_from_str(include_str!("../inputs/day05-real.txt"));
     real.debug(false);
-    real.reset();
+    real.ignore_wants_input(true);
     real.run();
     real.input(5);
 
-    match real.output() {
-        OutputMessage::Value(v) => println!("Part 2: {}", v),
-        OutputMessage::Halt => panic!("Unexpected halt!"),
-    }
-
-    match real.output() {
-        OutputMessage::Value(_) => panic!("Unexpected value!"),
-        OutputMessage::Halt => (),
-    }
+    println!("Part 2: {}", real.output_value().unwrap());
 }

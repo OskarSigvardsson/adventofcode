@@ -4,6 +4,13 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::vec::Vec;
 
+#[derive(Debug)]
+pub enum IntCodeError {
+    UnexpectedValue(i64),
+    UnexpectedHalt,
+    UnexpectedWantsInput,
+}
+
 pub struct IntCode {
     initial: Vec<i64>,
     execution: Arc<Mutex<ExecutionState>>,
@@ -11,6 +18,7 @@ pub struct IntCode {
     output: Receiver<OutputMessage>,
     thread_handle: Option<JoinHandle<()>>,
     thread_messages: Sender<ThreadMessage>,
+    ignore_wants_input: bool,
 }
 
 struct ExecutionState {
@@ -29,6 +37,7 @@ pub enum InputMessage {
 #[derive(PartialEq, Debug)]
 pub enum OutputMessage {
     Halt,
+    WantsInput,
     Value(i64),
 }
 
@@ -66,12 +75,14 @@ impl IntCode {
         let (inTx, inRx) = channel();
         let (outTx, outRx) = channel();
         let (threadTx, threadRx) = channel::<ThreadMessage>();
+
         let exec = Arc::new(Mutex::new(ExecutionState {
             memory: initial.clone(),
             input: inRx,
             output: outTx,
             debug: false,
         }));
+
         let execThread = exec.clone();
 
         let thread = thread::spawn(move || loop {
@@ -82,13 +93,18 @@ impl IntCode {
         });
 
         IntCode {
-            initial: initial,
+            initial,
             execution: exec,
             input: inTx,
             output: outRx,
             thread_handle: Some(thread),
             thread_messages: threadTx,
+            ignore_wants_input: false,
         }
+    }
+
+    pub fn ignore_wants_input(&mut self, ignore: bool) {
+        self.ignore_wants_input = ignore;
     }
 
     pub fn debug(&mut self, debug: bool) {
@@ -100,20 +116,56 @@ impl IntCode {
     }
 
     pub fn output(&self) -> OutputMessage {
-        self.output.recv().unwrap()
-    }
-
-    pub fn output_value(&self) -> i64 {
-        match self.output.recv().unwrap() {
-            OutputMessage::Value(v) => v,
-            OutputMessage::Halt => panic!("unexpected halt"),
+        if self.ignore_wants_input {
+            match self.output.recv().unwrap() {
+                OutputMessage::WantsInput => self.output(),
+                def => def,
+            }
+        } else {
+            self.output.recv().unwrap()
         }
     }
 
-    pub fn output_halt(&self) {
+    pub fn wants_input(&self) -> Result<(), IntCodeError> {
         match self.output.recv().unwrap() {
-            OutputMessage::Value(_) => panic!("unexpected value"),
-            OutputMessage::Halt => (),
+            OutputMessage::Value(v) => Err(IntCodeError::UnexpectedValue(v)),
+            OutputMessage::Halt => Err(IntCodeError::UnexpectedHalt),
+            OutputMessage::WantsInput => Ok(()),
+        }
+    }
+
+    pub fn output_value(&self) -> Result<i64, IntCodeError> {
+        match self.output.recv().unwrap() {
+            OutputMessage::Value(v) => Ok(v),
+            OutputMessage::Halt => Err(IntCodeError::UnexpectedHalt),
+            OutputMessage::WantsInput => {
+                if self.ignore_wants_input {
+                    self.output_value()
+                } else {
+                    Err(IntCodeError::UnexpectedWantsInput)
+                }
+            }
+        }
+    }
+
+    pub fn output_halt(&self) -> Result<(), IntCodeError> {
+        match self.output.recv().unwrap() {
+            OutputMessage::Value(v) => Err(IntCodeError::UnexpectedValue(v)),
+            OutputMessage::Halt => Ok(()),
+            OutputMessage::WantsInput => {
+                if self.ignore_wants_input {
+                    self.output_halt()
+                } else {
+                    Err(IntCodeError::UnexpectedWantsInput)
+                }
+            }
+        }
+    }
+
+    pub fn try_output(&self) -> Option<OutputMessage> {
+        match self.output.try_recv() {
+            Ok(v) => Some(v),
+            Err(_) => None,
         }
     }
 
@@ -137,17 +189,7 @@ impl IntCode {
         self.thread_messages.send(ThreadMessage::Run).unwrap();
     }
 
-    pub fn run_to_halt(&mut self) {
-        self.run();
-        loop {
-            match self.output() {
-                OutputMessage::Value(_) => continue,
-                OutputMessage::Halt => break,
-            }
-        }
-    }
-
-    pub fn collect_output(&mut self) -> Vec<i64> {
+    pub fn collect_output(&mut self) -> Result<Vec<i64>, IntCodeError> {
         let mut output = Vec::new();
 
         loop {
@@ -155,7 +197,16 @@ impl IntCode {
                 OutputMessage::Value(v) => {
                     output.push(v);
                 }
-                OutputMessage::Halt => return output,
+                OutputMessage::Halt => {
+                    return Ok(output);
+                }
+                OutputMessage::WantsInput => {
+                    if self.ignore_wants_input {
+                        continue;
+                    } else {
+                        return Err(IntCodeError::UnexpectedWantsInput);
+                    }
+                }
             }
         }
     }
@@ -327,6 +378,9 @@ impl ExecutionState {
 
                 3 => {
                     let addr = next!();
+
+                    self.output.send(OutputMessage::WantsInput).unwrap();
+
                     let input = match self.input.recv().unwrap() {
                         InputMessage::Stop => return,
                         InputMessage::Value(v) => v,
