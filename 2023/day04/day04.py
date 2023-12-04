@@ -1,6 +1,4 @@
 import re
-from collections import defaultdict
-from itertools import product
 
 with open("../inputs/day04-real.txt") as f:
     ns = [tuple(set(int(s) for s in re.findall("\d+", part)) for part in line.split(":")[1].split("|")) for line in f]
