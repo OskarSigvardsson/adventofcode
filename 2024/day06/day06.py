@@ -22,11 +22,11 @@ def inside(p):
 sx,sy = start()
 
 turn = {
-        ( 0,-1): ( 1, 0),
-        ( 1, 0): ( 0, 1),
-        ( 0, 1): (-1, 0),
-        (-1, 0): ( 0,-1),
-        }
+    ( 0,-1): ( 1, 0),
+    ( 1, 0): ( 0, 1),
+    ( 0, 1): (-1, 0),
+    (-1, 0): ( 0,-1),
+}
 
 def part1():
     p = sx,sy
@@ -43,10 +43,9 @@ def part1():
         else:
             p = nx,ny
 
-    p1 = len(visited)
-    print(f"Part 1: {p1}")
+    return visited
 
-def part2():
+def part2(path):
     global grid
     def loops():
         p = sx,sy
@@ -70,14 +69,17 @@ def part2():
 
     p2 = 0
 
-    for x,y in product(range(w), range(h)):
+    for x,y in path:
         if grid[y][x] != ".": continue
 
         grid[y][x] = "#"
         p2 += 1 if loops() else 0
         grid[y][x] = "."
 
-    print(f"Part 2: {p2}")
+    return p2
 
-part1()
-part2()
+p1 = part1()
+p2 = part2(p1)
+
+print(f"Part 1: {len(p1)}")
+print(f"Part 2: {p2}")
