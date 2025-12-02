@@ -1,4 +1,3 @@
-
 lines = list(open("../inputs/day01-real.txt"))
 
 signs = { "L": -1, "R": 1 }
