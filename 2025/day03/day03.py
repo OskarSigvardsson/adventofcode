@@ -29,3 +29,4 @@ part2 = sum(maxpower(line, 0, 12) for line in range(len(lines)))
 
 print(f"Part 1: {part1}")
 print(f"Part 2: {part2}")
+print(length)

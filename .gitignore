@@ -3,3 +3,5 @@
 **/zig-out/**
 *.dSYM
 **/.DS_Store
+2025/inputs
+.envrc
