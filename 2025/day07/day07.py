@@ -23,7 +23,7 @@ def part1():
 
 def sample(x,y):
 	if x not in range(w): return "."
-	if y not in range(w): return "."
+	if y not in range(h): return "."
 	return lines[y][x]
 
 def timelines(x, y, memo = {}):
