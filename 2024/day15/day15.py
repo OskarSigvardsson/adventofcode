@@ -102,11 +102,16 @@ def part2(inputGrid):
 
         swap(x,y,x+dx,y+dy)
 
+    def debug():
+        for line in grid:
+            print("".join(line))
     x,y = sx,sy
     for dx,dy in (dirs[inst] for inst in instructions):
         if can_push(x,y,dx,dy):
             push(x,y,dx,dy)
             x,y = x+dx,y+dy
+        debug()
+        input()
 
     return sum(y*100 + x for x,y in product(range(w),range(h)) if grid[y][x] == '[')
 

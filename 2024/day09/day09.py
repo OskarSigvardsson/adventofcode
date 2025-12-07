@@ -28,3 +28,9 @@ while p2 > p1:
 
 p1 = sum(int(c)*i for i,c in enumerate(disk) if c != '.')
 print(f"Part 1: {p1}")
+
+
+def fun(v):
+	match v:
+		case (x,y): print("it's a position, and it's x value is", x)
+		case [x,y,z]: print("it's a list with three things in it", x, y, z)

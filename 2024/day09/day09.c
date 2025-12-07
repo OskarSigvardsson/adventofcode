@@ -11,7 +11,15 @@ struct segment {
     struct segment *prev;
 };
 
+0123456789
+..........
+0123454589
+
+static struct segment segment_pool[1000000];
+
 int main() {
+    struct segment *next_segment = segment_pool;
+
     FILE *file = fopen("../inputs/day09-real.txt", "r");
 
     struct segment head = {
@@ -28,7 +36,7 @@ int main() {
     while ((c = fgetc(file)) != EOF) {
         if (!isdigit(c)) continue;
 
-        struct segment *link = malloc(sizeof(struct segment));
+        struct segment *link = next_segment++;
         link->used = used;
         link->index = index;
         link->size = (int32_t)(c - '0');
@@ -48,14 +56,15 @@ int main() {
             curr = curr->prev;
             continue;
         }
-
+        
         for (struct segment *link = head.next->next; link != curr; link = link->next) {
+
             if (link->used || link->size < curr->size) {
                 continue;
             }
 
             if (link->size != curr->size) {
-                struct segment *new = malloc(sizeof(struct segment));
+                struct segment *new = next_segment++;
                 new->used = false;
                 new->index = -1;
                 new->size = link->size - curr->size;
@@ -72,6 +81,7 @@ int main() {
             curr->used = false;
             break;
         }
+        
         curr = curr->prev;
     }
 

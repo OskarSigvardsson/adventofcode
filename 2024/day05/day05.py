@@ -10,6 +10,8 @@ for line in open("../inputs/day05-real.txt"):
 
     if line.count(",") > 0:
         us.append([int(n) for n in line.split(",")])
+        
+print(max([len(u) for u in us]))
 
 def ordered(l):
     for i in range(1, len(l)):
